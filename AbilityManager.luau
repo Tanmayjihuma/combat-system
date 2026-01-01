@@ -1,4 +1,3 @@
--- AbilityManager (FULL FINAL VERSION)
 local AbilityManager = {}
 
 local Players = game:GetService("Players")
@@ -14,12 +13,9 @@ local PowerService = require(script.Parent.PowerService)
 local DamageHandler = require(script.Parent.DamageHandler)
 local EffectsManager = require(script.Parent.EffectsManager)
 
-local cooldowns = {}  
-local activeBeams = {} 
+local cooldowns = {}
+local activeBeams = {}
 
--------------------------------------------------------
--- Utility
--------------------------------------------------------
 local function setCooldown(player, abilityId)
 	local uid = player.UserId
 	cooldowns[uid] = cooldowns[uid] or {}
@@ -34,9 +30,6 @@ local function onCooldown(player, abilityId, cd)
 	return (tick() - last) < cd
 end
 
--------------------------------------------------------
--- BASIC ABILITIES
--------------------------------------------------------
 local function lightningDash(player, def)
 	local char = player.Character
 	if not char then return end
@@ -79,9 +72,6 @@ local function windDash(player, def)
 	hrp.CFrame = hrp.CFrame + hrp.CFrame.LookVector * def.DashDistance
 end
 
--------------------------------------------------------
--- WIND GUST (AoE with OverlapParams)
--------------------------------------------------------
 local function windGust(player, def)
 	local char = player.Character
 	if not char then return end
@@ -121,9 +111,6 @@ local function windGust(player, def)
 	end
 end
 
--------------------------------------------------------
--- BRUTE GROUND SLAM (ANIMATION-EVENT BASED)
--------------------------------------------------------
 local function bruteGroundSlam(player, def, eventType)
 	local char = player.Character
 	if not char then return end
@@ -133,7 +120,6 @@ local function bruteGroundSlam(player, def, eventType)
 	local origin = hrp.Position
 	local radius = def.Radius or 18
 
-	-- e1 = SOUND
 	if eventType == "e1" then
 		local folder = ReplicatedStorage:WaitForChild("Sounds")
 		local sfx = folder:FindFirstChild("Slam") or folder:GetChildren()[1]
@@ -146,7 +132,6 @@ local function bruteGroundSlam(player, def, eventType)
 		return
 	end
 
-	-- e2 = DAMAGE + KNOCKBACK
 	if eventType == "e2" then
 		local params = OverlapParams.new()
 		params.FilterType = Enum.RaycastFilterType.Blacklist
@@ -176,9 +161,6 @@ local function bruteGroundSlam(player, def, eventType)
 	end
 end
 
--------------------------------------------------------
--- LIGHTNING BEAM (HOLDABLE)
--------------------------------------------------------
 local function stopLightningBeam(player, def)
 	local data = activeBeams[player]
 	if not data then return end
@@ -246,7 +228,6 @@ local function startLightningBeam(player, def)
 				hitPos = result.Position
 			end
 
-			-- Beam visual
 			local distance = (hitPos - origin).Magnitude
 			local beam = Instance.new("Part")
 			beam.Anchored = true
@@ -258,7 +239,6 @@ local function startLightningBeam(player, def)
 			beam.Parent = workspace
 			Debris:AddItem(beam, 0.15)
 
-			-- Damage tick
 			if result then
 				local hitChar = result.Instance:FindFirstAncestorOfClass("Model")
 				local hum2 = hitChar and hitChar:FindFirstChildWhichIsA("Humanoid")
@@ -278,16 +258,13 @@ local function startLightningBeam(player, def)
 	end)
 end
 
--------------------------------------------------------
--- NORMAL ABILITY DISPATCHER
--------------------------------------------------------
 local function executeNonHold(player, power, abilityId, def)
 	if power == "Lightning" then
 		if abilityId == "LightningDash" then lightningDash(player, def) end
 
 	elseif power == "Brute" then
 		if abilityId == "HeavyPunch" then bruteHeavyPunch(player, def) end
-		if abilityId == "GroundSlam" then end -- handled by events
+		if abilityId == "GroundSlam" then end
 
 	elseif power == "Wind" then
 		if abilityId == "WindDash" then windDash(player, def)
@@ -295,18 +272,14 @@ local function executeNonHold(player, power, abilityId, def)
 	end
 end
 
--------------------------------------------------------
--- INIT
--------------------------------------------------------
 function AbilityManager:Init()
 	useAbilityEvent.OnServerEvent:Connect(function(player, abilityId, state)
 		local power = PowerService:GetPower(player)
 		local def = PowerConfig.Powers[power].Abilities[abilityId]
 		if not def then return end
 
-		-- Brute Slam events
 		if abilityId == "GroundSlam" then
-			if state == "e1" or state == "e2"	then
+			if state == "e1" or state == "e2" then
 				bruteGroundSlam(player, def, state)
 				return
 			else
@@ -317,14 +290,12 @@ function AbilityManager:Init()
 			end
 		end
 
-		-- Lightning Beam
 		if abilityId == "LightningBeam" and def.Holdable then
 			if state == "start" then startLightningBeam(player, def) end
-			if state == "stop"	then stopLightningBeam(player, def) end
+			if state == "stop" then stopLightningBeam(player, def) end
 			return
 		end
 
-		-- Normal tap abilities
 		if state == nil then
 			if def.Cooldown and not onCooldown(player, abilityId, def.Cooldown) then
 				setCooldown(player, abilityId)
